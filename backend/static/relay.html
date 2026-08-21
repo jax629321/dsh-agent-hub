@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人工中继</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="relay-wrap">
+<h1>人工中继站</h1>
+<div class="info" id="info">加载中…</div>
+<div class="status idle" id="status">正在检查任务…</div>
+<div class="cb-box" id="cb-box" hidden>
+  <div class="cb-row"><span class="cb-label">接入模式</span><span id="cb-mode">—</span></div>
+  <div class="cb-row"><span class="cb-label">任务状态</span><span id="cb-status">—</span></div>
+  <div class="cb-row" id="cb-url-row" hidden><span class="cb-label">Webhook</span><span id="cb-url" class="cb-url">—</span></div>
+  <button id="btn-cb-test" class="cb-test" hidden>测试 Webhook 连通性</button>
+</div>
+<div id="task-box"></div>
+<h3>粘贴你的 AI 的回复，点发送即回群：</h3>
+<textarea id="reply" rows="6" placeholder="把任务复制给你的 AI（网页版/其他工具），再把它的回复粘贴到这里"></textarea>
+<br>
+<button id="btn-send" disabled>发送回群</button>
+</div>
+
+<script>
+const token = new URLSearchParams(location.search).get("token");
+const $ = id => document.getElementById(id);
+let memberId = null;
+let currentReplyToken = null;  // 当前任务的 reply_token
+// 同步主题
+document.documentElement.setAttribute("data-theme", localStorage.getItem("trd_theme") || "dark");
+
+async function load() {
+  const r = await fetch(`/api/relay/${token}`);
+  if (!r.ok) { $("info").textContent = "邀约链接无效或已失效"; return; }
+  const d = await r.json();
+  memberId = d.member.id;
+  currentReplyToken = d.reply_token || null;  // 保存 reply_token
+  $("info").textContent = `你代表成员「${d.member.name}」，所在群：${d.room_name}`;
+  $("status").className = "status " + (d.waiting ? "waiting" : "idle");
+  $("status").textContent = d.waiting
+    ? "有任务等待你中继：请完成下方任务并提交回复"
+    : "暂无等待中的任务（页面每 5 秒自动刷新）";
+  $("btn-send").disabled = !d.waiting;
+  // 展示最近发给自己（@我）的任务与上下文
+  const msgs = (d.messages || []).filter(m =>
+    (m.content || "").includes("@" + d.member.name) || m.member_id === memberId);
+  $("task-box").innerHTML = msgs.slice(-8).map(m =>
+    `<div class="task ${m.member_id === memberId ? "mine" : ""}">
+      <div class="meta">${esc(m.sender_name)} · ${new Date(m.created_at*1000).toLocaleString()}
+      <button class="copy-btn">复制任务</button></div>
+      <div class="task-content">${esc(m.content || "")}</div></div>`).join("");
+  document.querySelectorAll(".copy-btn").forEach(b => b.onclick = () => {
+    navigator.clipboard.writeText(b.closest(".task").querySelector(".task-content").textContent);
+    b.textContent = "已复制"; setTimeout(() => b.textContent = "复制任务", 1500);
+  });
+  loadCbStatus();
+}
+
+/* Webhook 状态区块：展示接入模式（推送/轮询）、任务状态、回调地址与连通性测试 */
+const STATUS_NAME = { pending: "已入队(待取走)", active: "执行中(已取走)",
+  done: "已完成", cancelled: "已取消", stale: "已过期清理" };
+async function loadCbStatus() {
+  try {
+    const r = await fetch(`/api/bridge/${token}/status`);
+    if (!r.ok) return;
+    const d = await r.json();
+    $("cb-box").hidden = false;
+    $("cb-mode").textContent = d.callback_url ? "Webhook 推送（免轮询）" : "轮询模式（未注册 Webhook）";
+    $("cb-status").textContent = STATUS_NAME[d.status] || "无任务";
+    $("cb-url-row").hidden = !d.callback_url;
+    $("btn-cb-test").hidden = !d.callback_url;
+    if (d.callback_url) $("cb-url").textContent = d.callback_url;
+  } catch (e) {}
+}
+
+$("btn-cb-test").onclick = async () => {
+  const b = $("btn-cb-test");
+  b.disabled = true; b.textContent = "测试中…";
+  try {
+    const r = await fetch(`/api/bridge/${token}/callback/test`, { method: "POST" });
+    const d = await r.json();
+    b.textContent = d.ok ? "✓ 送达成功" : ("✗ " + (d.msg || d.detail || "推送失败"));
+  } catch (e) { b.textContent = "✗ 请求失败"; }
+  setTimeout(() => { b.disabled = false; b.textContent = "测试 Webhook 连通性"; }, 3000);
+};
+
+$("btn-send").onclick = async () => {
+  const content = $("reply").value.trim();
+  if (!content) return;
+  const r = await fetch(`/api/relay/${token}/reply`, { method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, reply_token: currentReplyToken }) });
+  const d = await r.json();
+  if (r.ok) { $("reply").value = ""; alert("已回群！"); load(); }
+  else alert(d.detail || "发送失败");
+};
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>

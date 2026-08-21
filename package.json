@@ -1,0 +1,39 @@
+{
+  "name": "dsh-agent-hub",
+  "version": "0.1.1",
+  "description": "智能体协作台 —— 多智能体房间/群聊/派单控制台(DSH 内嵌,可上插件市场)",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ]
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "agent-hub",
+    "multi-agent",
+    "orchestrator",
+    "multi-agent-collaboration",
+    "智能体协作台"
+  ],
+  "files": [
+    "lib",
+    "backend",
+    "README.md",
+    "cordis.patch.yml"
+  ]
+}

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务中继分发器</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 左侧：房间栏 -->
+  <aside id="rooms">
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <style>
+          .logo-hub { fill: var(--accent); }
+          .logo-node1 { fill: var(--brain); }
+          .logo-node2 { fill: var(--success); }
+          .logo-node3 { fill: var(--warn); }
+          .logo-link { stroke: var(--border-accent); stroke-width: 1.5; }
+          .logo-wave1 { fill: none; stroke: var(--accent); stroke-width: 0.8; opacity: 0.4; }
+          .logo-wave2 { fill: none; stroke: var(--accent); stroke-width: 0.5; opacity: 0.2; }
+        </style>
+        <circle cx="16" cy="16" r="3.5" class="logo-hub"/>
+        <circle cx="7" cy="8" r="2.5" class="logo-node1"/>
+        <circle cx="25" cy="8" r="2.5" class="logo-node2"/>
+        <circle cx="16" cy="26" r="2.5" class="logo-node3"/>
+        <line x1="16" y1="16" x2="7" y2="8" class="logo-link"/>
+        <line x1="16" y1="16" x2="25" y2="8" class="logo-link"/>
+        <line x1="16" y1="16" x2="16" y2="26" class="logo-link"/>
+        <circle cx="16" cy="16" r="7" class="logo-wave1"/>
+        <circle cx="16" cy="16" r="10" class="logo-wave2"/>
+      </svg>
+      <span class="brand-text">任务中继分发器</span>
+      <div class="brand-actions">
+        <button id="btn-theme" title="切换深色/浅色主题">🌙</button>
+      </div>
+    </div>
+    <div id="room-list"></div>
+    <div class="room-create">
+      <input id="new-room-name" placeholder="新群名称">
+      <button id="btn-create-room">建群</button>
+    </div>
+    <a class="history-link" href="/history.html">历史记录（已删群）</a>
+  </aside>
+
+  <div class="resizer" data-panel="rooms"></div>
+
+  <!-- 中间：消息流 -->
+  <main id="chat">
+    <header id="chat-header">
+      <span id="room-title">请选择或创建一个群</span>
+      <label id="auto-approve-wrap" hidden>
+        <input type="checkbox" id="auto-approve"> 自动批准每轮计划
+      </label>
+      <button id="btn-stop" hidden>叫停任务</button>
+    </header>
+    <div id="approval-bar" hidden>
+      <div id="approval-text"></div>
+      <div class="approval-actions">
+        <button id="btn-approve">确认执行</button>
+        <button id="btn-reject" class="danger">否决</button>
+      </div>
+    </div>
+    <div id="messages"></div>
+    <footer id="composer">
+      <div id="mention-popup" hidden></div>
+      <input type="file" id="file-input" hidden multiple>
+      <button id="btn-attach" title="添加附件">📎</button>
+      <div id="attach-list"></div>
+      <textarea id="input" rows="2" placeholder="输入消息，@成员名 可派发任务；输入需求后可点「发给统筹大脑」"></textarea>
+      <div class="composer-btns">
+        <button id="btn-send">发送</button>
+        <button id="btn-brain" title="把输入内容作为需求交给统筹大脑编排">发给统筹大脑</button>
+      </div>
+    </footer>
+  </main>
+
+  <div class="resizer" data-panel="members-panel"></div>
+
+  <!-- 右侧：成员面板 -->
+  <aside id="members-panel">
+    <div class="panel-title">成员</div>
+    <div id="member-list"></div>
+    <div id="memory-box" hidden>
+      <div class="panel-title">群记忆（大脑沉淀）</div>
+      <textarea id="memory-text" rows="4" placeholder="大脑每轮自动沉淀关键信息，可手动编辑"></textarea>
+      <button id="btn-save-memory">保存记忆</button>
+    </div>
+    <div class="panel-title">邀约 Agent 入群</div>
+    <div id="member-form">
+      <input id="m-name" placeholder="成员显示名">
+      <select id="m-type">
+        <option value="openai">API 型（OpenAI 兼容）</option>
+        <option value="coze">扣子 Coze</option>
+        <option value="dsh">DSH 桥（DeepSeek Harness Agent）</option>
+        <option value="workbuddy">WorkBuddy（腾讯 Agent 中继）</option>
+        <option value="trae">Trae Work（IDE Agent 中继）</option>
+        <option value="relay">人工中继（生成邀约链接）</option>
+      </select>
+      <div id="f-openai">
+        <input id="m-base-url" placeholder="base_url，如 https://api.deepseek.com">
+        <input id="m-api-key" type="password" placeholder="api_key">
+        <input id="m-model" placeholder="model，如 deepseek-chat">
+      </div>
+      <div id="f-coze" hidden>
+        <input id="m-pat" type="password" placeholder="PAT token">
+        <input id="m-bot-id" placeholder="bot_id">
+      </div>
+      <div id="f-dsh" hidden>
+        <input id="m-dsh-base-url" placeholder="DSH 端点 base_url，默认 http://127.0.0.1:3080">
+        <input id="m-dsh-token" type="password" placeholder="DSH Agent Token（面板或 trd_card 获取）">
+      </div>
+      <button id="btn-add-member">添加成员</button>
+      <div class="invite-string-box">
+        <input id="invite-string" placeholder="或粘贴邀约字符串 TRD|openai|... / TRD|dsh|...">
+        <button id="btn-invite-string">解析入群</button>
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

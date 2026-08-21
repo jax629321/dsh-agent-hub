@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>历史记录 - 任务中继分发器</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="hist-wrap">
+  <div class="hist-head">
+    <h1>🗂 历史记录（已删除的群）</h1>
+    <a href="/" class="history-link" style="border:none;color:#2563eb">← 返回群聊</a>
+  </div>
+  <div id="arch-list"><div class="empty-tip">加载中…</div></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
+// 同步主题
+document.documentElement.setAttribute("data-theme", localStorage.getItem("trd_theme") || "dark");
+const api = async (url, opts = {}) => {
+  const r = await fetch(url, opts.method ? {
+    ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) }
+  } : opts);
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(e.detail || r.statusText); throw new Error(r.status); }
+  return r.json();
+};
+const fmt = (ts) => new Date(ts * 1000).toLocaleString();
+
+async function load() {
+  const rooms = await api("/api/archived_rooms");
+  if (!rooms.length) {
+    $("arch-list").innerHTML = '<div class="empty-tip">暂无已删除的群</div>';
+    return;
+  }
+  $("arch-list").innerHTML = rooms.map(r => `
+    <div class="arch-item" data-id="${r.id}">
+      <div><b>${esc(r.name)}</b></div>
+      <div class="arch-meta">删除于 ${fmt(r.deleted_at)} · 成员 ${r.member_count} 人 · 消息 ${r.message_count} 条
+        ${r.memory ? `<br>群记忆：${esc(r.memory)}` : ""}</div>
+      <div class="arch-actions">
+        <button class="a-view">查看聊天记录</button>
+        <button class="a-restore">恢复到群列表</button>
+        <button class="a-purge danger">彻底删除</button>
+      </div>
+      <div class="arch-msgs" hidden></div>
+    </div>`).join("");
+
+  document.querySelectorAll(".arch-item").forEach(item => {
+    const rid = item.dataset.id;
+    item.querySelector(".a-view").onclick = async () => {
+      const box = item.querySelector(".arch-msgs");
+      if (!box.hidden) { box.hidden = true; return; }
+      const d = await api(`/api/rooms/${rid}`);
+      box.innerHTML = d.messages.map(m => `
+        <div class="msg ${m.sender_type} ${m.status !== "done" ? m.status : ""}">
+          <div class="meta">${esc(m.sender_name)} · ${fmt(m.created_at)}</div>
+          <div class="bubble">${esc(m.content || "")}</div>
+        </div>`).join("") || '<div class="empty-tip">无消息</div>';
+      box.hidden = false;
+    };
+    item.querySelector(".a-restore").onclick = async () => {
+      await api(`/api/rooms/${rid}/restore`, { method: "POST", body: "{}" });
+      load();
+    };
+    item.querySelector(".a-purge").onclick = async () => {
+      if (!confirm("彻底删除后不可恢复，确认？")) return;
+      await api(`/api/rooms/${rid}/purge`, { method: "DELETE" });
+      load();
+    };
+  });
+}
+load();
+</script>
+</body>
+</html>

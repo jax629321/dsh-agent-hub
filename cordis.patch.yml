@@ -1,0 +1,4 @@
+# 智能体协作台(dsh-agent-hub)bundle 层 —— 随包分发,`dsh plugin add` 安装后自动挂载
+- insert:
+    - id: dsh-agent-hub
+      name: 'dsh-agent-hub'

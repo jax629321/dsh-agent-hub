@@ -1,0 +1,27 @@
+# 任务中继分发器 全局配置
+# 注意：本文件含敏感凭据，请勿提交到任何公开仓库
+
+# 统筹大脑（主 Agent）使用的模型，OpenAI 兼容协议
+orchestrator:
+  base_url: "https://api.deepseek.com"   # 可改为通义/Kimi/GPT 等任意 OpenAI 兼容端点
+  api_key: "在此填入你的API_KEY"
+  model: "deepseek-chat"
+
+# 编排熔断参数
+limits:
+  max_rounds: 10        # 单任务最大编排轮次
+  round_timeout_sec: 600 # 单轮分发的成员回复超时（秒，relay/人工中继需较长等待）
+  relay_stale_sec: 1800   # relay 任务无心跳无提交的清理阈值（秒）
+  long_poll_timeout: 120  # Bridge 长轮询 hold 时间（秒）
+  context_tail: 20       # 喂给主 Agent 的最近消息条数
+
+# 审批默认开关（房间级可在界面覆盖）
+auto_approve: false      # true=主 Agent 每轮分发无需人类确认
+
+# 服务
+server:
+  host: "127.0.0.1"
+  port: 8000
+
+# 数据目录（SQLite 与附件）
+data_dir: "data"
