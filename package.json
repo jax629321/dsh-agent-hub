@@ -1,6 +1,6 @@
 {
   "name": "dsh-agent-hub",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "智能体协作台 —— 多智能体房间/群聊/派单控制台(DSH 内嵌,可上插件市场)",
   "type": "module",
   "main": "lib/index.js",
