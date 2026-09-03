@@ -1,0 +1,16 @@
+# runtime artifacts (never commit)
+backend/.venv/
+backend/data/
+backend/**/__pycache__/
+*.pyc
+
+# npm
+node_modules/
+*.tgz
+.npmrc
+
+# editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
